@@ -2,7 +2,9 @@
 
 [[https://www.buymeacoffee.com/xenodium][Buy me a coffee ☕]]
 
-Evaluate SwiftUI snippets using Emacs org babell.
+Evaluate SwiftUI snippets using Emacs [[https://orgmode.org/worg/org-contrib/babel/intro.html][org babel]].
+
+[[file:ob-swiftui.gif]]
 
 * Install
 
@@ -84,7 +86,7 @@ a file.
 * Auto refresh :results file image
 
 If executing the block does not refresh the inlined image, try adding /org-redisplay-inline-images/ in a hook.
-
+org-babel-after-execute-hook
 #+begin_src emacs-lisp :lexical no
   (add-hook 'org-babel-after-execute-hook (lambda ()
                                             (when org-inline-image-overlays
