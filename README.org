@@ -4,6 +4,8 @@
 
 Evaluate SwiftUI snippets using Emacs [[https://orgmode.org/worg/org-contrib/babel/intro.html][org babel]].
 
+Big thanks to Chris Eidhof, who tweeted a snippet [[https://gist.github.com/chriseidhof/26768f0b63fa3cdf8b46821e099df5ff][to run any SwiftUI view as a macOS app]]. Much of /ob-swiftui/'s Swift code is based on that snippet as well as some additional tweaks he made (like writing to png).
+
 [[file:ob-swiftui.gif]]
 
 * Install
