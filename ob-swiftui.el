@@ -3,8 +3,9 @@
 ;; Copyright (C) Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez
-;; Keywords: swiftui, literate programming, reproducible research
-;; Homepage: https://github.com/xenodium/ob-swiftui
+;; Package-Requires: ((emacs "25.1") (swift-mode "8.2.0") (org "9.2.0"))
+;; URL: https://github.com/xenodium/ob-swiftui
+;; Keywords: swiftui, literate programming
 ;; Version: 0.01
 
 ;;; License:
@@ -35,61 +36,70 @@
 ;;
 ;; Relevant header arguments:
 ;;
-;; :results window
+;; `:results' window
 ;;
-;;   Runs SwiftUI in a separate window.
+;;   Runs SwiftUI in a separate window (default and can be omitted).
 ;;
-;; :results graphics
+;; `:results' file
 ;;
 ;;   Runs SwiftUI in the background and saves an image snapshot to
-;;   a file to be rendered as a graphic.
+;;   a file.
 ;;
-;; :view FooView
+;; `:view' FooView
 ;;
-;;   If given, use FooView as the root view. Otherwise, generate a
-;;   root view and embed source block in body.
+;;   If `view:' is given, use FooView as the root view.  Otherwise,
+;;   generate a root view and embed source block in body.
 ;;
-;; For using your own root view:
+;; Examples:
 ;;
-;;   #+begin_src swiftui :results window :view FooView
-;;     struct FooView: View {
-;;       var body: some View {
-;;         VStack(spacing: 10) {
-;;           HStack(spacing: 10) {
-;;             Rectangle().fill(Color.yellow)
-;;             Rectangle().fill(Color.green)
-;;           }
-;;           Rectangle().fill(Color.blue)
-;;           HStack(spacing: 10) {
-;;             Rectangle().fill(Color.green)
-;;             Rectangle().fill(Color.yellow)
-;;           }
-;;         }
+;;   Use generated root view and render in external window (default):
+;;
+;;     #+begin_src swiftui
+;;       Rectangle()
+;;         .fill(Color.yellow)
 ;;         .frame(maxWidth: .infinity, maxHeight: .infinity)
-;;       }
-;;     }
-;;   #+end_src
+;;     #+end_src
 ;;
-;; For generating a root view:
+;;     is equivalent to:
 ;;
-;;   #+begin_src swiftui :results window :view none
-;;     VStack(spacing: 10) {
-;;         HStack(spacing: 10) {
-;;           Rectangle().fill(Color.yellow)
-;;           Rectangle().fill(Color.green)
-;;         }
-;;         Rectangle().fill(Color.blue)
-;;         HStack(spacing: 10) {
-;;           Rectangle().fill(Color.green)
-;;           Rectangle().fill(Color.yellow)
+;;     #+begin_src swiftui :results window :view none
+;;       Rectangle()
+;;         .fill(Color.yellow)
+;;         .frame(maxWidth: .infinity, maxHeight: .infinity)
+;;     #+end_src
+;;
+;;   Using your own root view:
+;;
+;;     #+begin_src swiftui :results window :view FooView
+;;       struct FooView: View {
+;;         var body: some View {
+;;           VStack(spacing: 10){
+;;             BarView()
+;;             BazView()
+;;           }
 ;;         }
 ;;       }
-;;       .frame(maxWidth: .infinity, maxHeight: .infinity)
-;;   #+end_src
+;;
+;;       struct BarView: View {
+;;         var body: some View {
+;;           Rectangle()
+;;             .fill(Color.yellow)
+;;             .frame(maxWidth: .infinity, maxHeight: .infinity)
+;;         }
+;;       }
+;;
+;;       struct BazView: View {
+;;         var body: some View {
+;;           Rectangle()
+;;             .fill(Color.blue)
+;;             .frame(maxWidth: .infinity, maxHeight: .infinity)
+;;         }
+;;       }
+;;     #+end_src
 
 ;;; Requirements:
 
-;; Depends on `swift-mode' for editing SwiftUI Swift code.
+;; Depends on `swift-mode' for editing Swift code.
 
 ;;; Code:
 (require 'ob)
@@ -111,7 +121,7 @@
   (add-to-list 'org-src-lang-modes '("swiftui" . swift)))
 
 (defun org-babel-expand-body:swiftui (body params &optional processed-params)
-  "Expand BODY according to PARAMS, return the expanded body."
+  "Expand BODY according to PARAMS and PROCESSED-PARAMS, return the expanded body."
   (let ((results (map-elt params :result-params))
         (view-name (map-elt params :view)))
     (setq body (format
@@ -127,9 +137,6 @@ let screenshotURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: tr
 let preview = %s
 
 // Body to run.
-%s
-
-// Additional view definitions.
 %s
 
 extension NSApplication {
@@ -205,13 +212,15 @@ func screenshot(view: NSView, saveTo fileURL: URL) {
   let pngData = rep.representation(using: .png, properties: [:])
   try! pngData?.write(to: fileURL)
 }
+
+// Additional view definitions.
+%s
 "
-                (cond ((seq-contains-p results "graphics")
-                       "true")
-                      ((seq-contains-p results "window")
-                       "false")
-                      (t
-                       (user-error ":results must be either window or graphics")))
+                (if (seq-contains-p results "file")
+                    ;; Writes to file.
+                    "true"
+                  ;; Runs in separate window.
+                  "false")
                 (cond ((or (not view-name)
                            (string-equal view-name "none"))
                        (format "NSApplication.shared.run {%s}" body))
@@ -224,13 +233,14 @@ func screenshot(view: NSView, saveTo fileURL: URL) {
                        body))))))
 
 (defun org-babel-execute:swiftui (body params)
-  "Execute a block of SwiftUI code with org-babel.
+  "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing SwiftUI source code block")
   (let ((processed-params (org-babel-process-params params)))
     (with-temp-buffer
-      (insert (org-babel-expand-body:swiftui body params processed-params))
-      (print (org-babel-expand-body:swiftui body params processed-params))
+      (insert (org-babel-expand-body:swiftui body
+                                             params
+                                             processed-params))
       (shell-command-on-region
        (point-min)
        (point-max)
