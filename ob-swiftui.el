@@ -1,10 +1,10 @@
-;;; ob-template.el --- org-babel functions for template evaluation
+;;; ob-swiftui.el --- org-babel functions for SwiftUI evaluation
 
-;; Copyright (C) your name here
+;; Copyright (C) Alvaro Ramirez
 
-;; Author: your name here
-;; Keywords: literate programming, reproducible research
-;; Homepage: https://orgmode.org
+;; Author: Alvaro Ramirez
+;; Keywords: swiftui, literate programming, reproducible research
+;; Homepage: https://github.com/xenodium/ob-swiftui
 ;; Version: 0.01
 
 ;;; License:
@@ -26,128 +26,216 @@
 
 ;;; Commentary:
 
-;; This file is not intended to ever be loaded by org-babel, rather it
-;; is a template for use in adding new language support to Org-babel.
-;; Good first steps are to copy this file to a file named by the
-;; language you are adding, and then use `query-replace' to replace
-;; all strings of "template" in this file with the name of your new
-;; language.
+;; Run and render SwiftUI blocks using org babel.
 ;;
-;; If you have questions as to any of the portions of the file defined
-;; below please look to existing language support for guidance.
+;; Install with:
 ;;
-;; If you are planning on adding a language to org-babel we would ask
-;; that if possible you fill out the FSF copyright assignment form
-;; available at https://orgmode.org/request-assign-future.txt as this
-;; will make it possible to include your language support in the core
-;; of Org-mode, otherwise unassigned language support files can still
-;; be included in the contrib/ directory of the Org-mode repository.
+;;   (require 'ob-swiftui)
+;;   (ob-swiftui-setup)
+;;
+;; Relevant header arguments:
+;;
+;; :results window
+;;
+;;   Runs SwiftUI in a separate window.
+;;
+;; :results graphics
+;;
+;;   Runs SwiftUI in the background and saves an image snapshot to
+;;   a file to be rendered as a graphic.
+;;
+;; :view FooView
+;;
+;;   If given, use FooView as the root view. Otherwise, generate a
+;;   root view and embed source block in body.
+;;
+;; For using your own root view:
+;;
+;;   #+begin_src swiftui :results window :view FooView
+;;     struct FooView: View {
+;;       var body: some View {
+;;         VStack(spacing: 10) {
+;;           HStack(spacing: 10) {
+;;             Rectangle().fill(Color.yellow)
+;;             Rectangle().fill(Color.green)
+;;           }
+;;           Rectangle().fill(Color.blue)
+;;           HStack(spacing: 10) {
+;;             Rectangle().fill(Color.green)
+;;             Rectangle().fill(Color.yellow)
+;;           }
+;;         }
+;;         .frame(maxWidth: .infinity, maxHeight: .infinity)
+;;       }
+;;     }
+;;   #+end_src
+;;
+;; For generating a root view:
+;;
+;;   #+begin_src swiftui :results window :view none
+;;     VStack(spacing: 10) {
+;;         HStack(spacing: 10) {
+;;           Rectangle().fill(Color.yellow)
+;;           Rectangle().fill(Color.green)
+;;         }
+;;         Rectangle().fill(Color.blue)
+;;         HStack(spacing: 10) {
+;;           Rectangle().fill(Color.green)
+;;           Rectangle().fill(Color.yellow)
+;;         }
+;;       }
+;;       .frame(maxWidth: .infinity, maxHeight: .infinity)
+;;   #+end_src
 
 ;;; Requirements:
 
-;; Use this section to list the requirements of this language.  Most
-;; languages will require that at least the language be installed on
-;; the user's system, and the Emacs major mode relevant to the
-;; language be installed as well.
+;; Depends on `swift-mode' for editing SwiftUI Swift code.
 
 ;;; Code:
 (require 'ob)
 (require 'ob-ref)
 (require 'ob-comint)
 (require 'ob-eval)
-;; possibly require modes required for your language
+(require 'swift-mode)
+(require 'map)
 
-;; optionally define a file extension for this language
-(add-to-list 'org-babel-tangle-lang-exts '("template" . "tmp"))
+(defvar org-babel-default-header-args:swiftui '((:results . "window")
+                                                (:view . "none")))
 
-;; optionally declare default header arguments for this language
-(defvar org-babel-default-header-args:template '())
+(defun ob-swiftui-setup ()
+  "Set up babel SwiftUI support."
+  (add-to-list 'org-babel-tangle-lang-exts '("swiftui" . "swift"))
+  (org-babel-do-load-languages 'org-babel-load-languages
+                               (append org-babel-load-languages
+                                       '((swiftui . t))))
+  (add-to-list 'org-src-lang-modes '("swiftui" . swift)))
 
-;; This function expands the body of a source code block by doing
-;; things like prepending argument definitions to the body, it should
-;; be called by the `org-babel-execute:template' function below.
-(defun org-babel-expand-body:template (body params &optional processed-params)
+(defun org-babel-expand-body:swiftui (body params &optional processed-params)
   "Expand BODY according to PARAMS, return the expanded body."
-  (require 'inf-template)
-  (let ((vars (nth 1 (or processed-params (org-babel-process-params params)))))
-    (concat
-     (mapconcat ;; define any variables
-      (lambda (pair)
-        (format "%s=%S"
-                (car pair) (org-babel-template-var-to-template (cdr pair))))
-      vars "\n") "\n" body "\n")))
+  (let ((results (map-elt params :result-params))
+        (view-name (map-elt params :view)))
+    (setq body (format
+                "
+// Snippet heavily based on Chris Eidhof's code at:
+// https://gist.github.com/chriseidhof/26768f0b63fa3cdf8b46821e099df5ff
 
-;; This is the main function which is called to evaluate a code
-;; block.
-;;
-;; This function will evaluate the body of the source code and
-;; return the results as emacs-lisp depending on the value of the
-;; :results header argument
-;; - output means that the output to STDOUT will be captured and
-;;   returned
-;; - value means that the value of the last statement in the
-;;   source code block will be returned
-;;
-;; The most common first step in this function is the expansion of the
-;; PARAMS argument using `org-babel-process-params'.
-;;
-;; Please feel free to not implement options which aren't appropriate
-;; for your language (e.g. not all languages support interactive
-;; "session" evaluation).  Also you are free to define any new header
-;; arguments which you feel may be useful -- all header arguments
-;; specified by the user will be available in the PARAMS variable.
-(defun org-babel-execute:template (body params)
-  "Execute a block of Template code with org-babel.
+import Cocoa
+import SwiftUI
+import Foundation
+
+let screenshotURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString + \".png\")
+let preview = %s
+
+// Body to run.
+%s
+
+// Additional view definitions.
+%s
+
+extension NSApplication {
+  public func run<V: View>(_ view: V) {
+    let appDelegate = AppDelegate(view)
+    NSApp.setActivationPolicy(.regular)
+    mainMenu = customMenu
+    delegate = appDelegate
+    run()
+  }
+
+  public func run<V: View>(@ViewBuilder view: () -> V) {
+    let appDelegate = AppDelegate(view())
+    NSApp.setActivationPolicy(.regular)
+    mainMenu = customMenu
+    delegate = appDelegate
+    run()
+  }
+}
+
+extension NSApplication {
+  var customMenu: NSMenu {
+    let appMenu = NSMenuItem()
+    appMenu.submenu = NSMenu()
+
+    let quitItem = NSMenuItem(
+      title: \"Quit \(ProcessInfo.processInfo.processName)\",
+      action: #selector(NSApplication.terminate(_:)), keyEquivalent: \"q\")
+    quitItem.keyEquivalentModifierMask = []
+    appMenu.submenu?.addItem(quitItem)
+
+    let mainMenu = NSMenu(title: \"Main Menu\")
+    mainMenu.addItem(appMenu)
+    return mainMenu
+  }
+}
+
+class AppDelegate<V: View>: NSObject, NSApplicationDelegate, NSWindowDelegate {
+  var window = NSWindow(
+    contentRect: NSRect(x: 0, y: 0, width: 414 * 0.2, height: 896 * 0.2),
+    styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+    backing: .buffered, defer: false)
+
+  var contentView: V
+
+  init(_ contentView: V) {
+    self.contentView = contentView
+  }
+
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    window.delegate = self
+    window.center()
+    window.contentView = NSHostingView(rootView: contentView)
+    window.makeKeyAndOrderFront(nil)
+
+    if preview {
+      screenshot(view: window.contentView!, saveTo: screenshotURL)
+      // Write path (without newline) so org babel can parse it.
+      print(screenshotURL.path, terminator: \"\")
+      NSApplication.shared.terminate(self)
+      return
+    }
+
+    window.title = \"press q to exit\"
+    window.setFrameAutosaveName(\"Main Window\")
+    NSApp.activate(ignoringOtherApps: true)
+  }
+}
+
+func screenshot(view: NSView, saveTo fileURL: URL) {
+  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
+  view.cacheDisplay(in: view.bounds, to: rep)
+  let pngData = rep.representation(using: .png, properties: [:])
+  try! pngData?.write(to: fileURL)
+}
+"
+                (cond ((seq-contains-p results "graphics")
+                       "true")
+                      ((seq-contains-p results "window")
+                       "false")
+                      (t
+                       (user-error ":results must be either window or graphics")))
+                (cond ((or (not view-name)
+                           (string-equal view-name "none"))
+                       (format "NSApplication.shared.run {%s}" body))
+                      (t
+                       (format "NSApplication.shared.run(%s())" view-name)))
+                (cond ((or (not view-name)
+                           (string-equal view-name "none"))
+                       "")
+                      (t
+                       body))))))
+
+(defun org-babel-execute:swiftui (body params)
+  "Execute a block of SwiftUI code with org-babel.
 This function is called by `org-babel-execute-src-block'"
-  (message "executing Template source code block")
-  (let* ((processed-params (org-babel-process-params params))
-         ;; set the session if the session variable is non-nil
-         (session (org-babel-template-initiate-session (first processed-params)))
-         ;; variables assigned for use in the block
-         (vars (second processed-params))
-         (result-params (third processed-params))
-         ;; either OUTPUT or VALUE which should behave as described above
-         (result-type (fourth processed-params))
-         ;; expand the body with `org-babel-expand-body:template'
-         (full-body (org-babel-expand-body:template
-                     body params processed-params)))
-    ;; actually execute the source-code block either in a session or
-    ;; possibly by dropping it to a temporary file and evaluating the
-    ;; file.
-    ;;
-    ;; for session based evaluation the functions defined in
-    ;; `org-babel-comint' will probably be helpful.
-    ;;
-    ;; for external evaluation the functions defined in
-    ;; `org-babel-eval' will probably be helpful.
-    ;;
-    ;; when forming a shell command, or a fragment of code in some
-    ;; other language, please preprocess any file names involved with
-    ;; the function `org-babel-process-file-name'. (See the way that
-    ;; function is used in the language files)
-    ))
+  (message "executing SwiftUI source code block")
+  (let ((processed-params (org-babel-process-params params)))
+    (with-temp-buffer
+      (insert (org-babel-expand-body:swiftui body params processed-params))
+      (print (org-babel-expand-body:swiftui body params processed-params))
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       "swift -" nil 't)
+      (buffer-string))))
 
-;; This function should be used to assign any variables in params in
-;; the context of the session environment.
-(defun org-babel-prep-session:template (session params)
-  "Prepare SESSION according to the header arguments specified in PARAMS."
-  )
-
-(defun org-babel-template-var-to-template (var)
-  "Convert an elisp var into a string of template source code
-specifying a var of the same value."
-  (format "%S" var))
-
-(defun org-babel-template-table-or-string (results)
-  "If the results look like a table, then convert them into an
-Emacs-lisp table, otherwise return the results as a string."
-  )
-
-(defun org-babel-template-initiate-session (&optional session)
-  "If there is not a current inferior-process-buffer in SESSION then create.
-Return the initialized session."
-  (unless (string= session "none")
-    ))
-
-(provide 'ob-template)
-;;; ob-template.el ends here
+(provide 'ob-swiftui)
+;;; ob-swiftui.el ends here
