@@ -1,11 +1,10 @@
-;;; ob-swiftui.el --- org-babel functions for SwiftUI evaluation
+;;; ob-swiftui.el --- Org babel functions for SwiftUI evaluation -*- lexical-binding: t; -*-
 
 ;; Copyright (C) Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez
 ;; Package-Requires: ((emacs "25.1") (swift-mode "8.2.0") (org "9.2.0"))
 ;; URL: https://github.com/xenodium/ob-swiftui
-;; Keywords: swiftui, literate programming
 ;; Version: 0.01
 
 ;;; License:
@@ -120,7 +119,22 @@
                                        '((swiftui . t))))
   (add-to-list 'org-src-lang-modes '("swiftui" . swift)))
 
-(defun org-babel-expand-body:swiftui (body params &optional processed-params)
+(defun org-babel-execute:swiftui (body params)
+  "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
+This function is called by `org-babel-execute-src-block'"
+  (message "executing SwiftUI source code block")
+  (let ((processed-params (org-babel-process-params params)))
+    (with-temp-buffer
+      (insert (ob-swiftui--expand-body body
+                                             params
+                                             processed-params))
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       "swift -" nil 't)
+      (buffer-string))))
+
+(defun ob-swiftui--expand-body (body params &optional processed-params)
   "Expand BODY according to PARAMS and PROCESSED-PARAMS, return the expanded body."
   (let ((results (map-elt params :result-params))
         (view-name (map-elt params :view)))
@@ -216,7 +230,7 @@ func screenshot(view: NSView, saveTo fileURL: URL) {
 // Additional view definitions.
 %s
 "
-                (if (seq-contains-p results "file")
+                (if (member "file" results)
                     ;; Writes to file.
                     "true"
                   ;; Runs in separate window.
@@ -231,21 +245,6 @@ func screenshot(view: NSView, saveTo fileURL: URL) {
                        "")
                       (t
                        body))))))
-
-(defun org-babel-execute:swiftui (body params)
-  "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
-This function is called by `org-babel-execute-src-block'"
-  (message "executing SwiftUI source code block")
-  (let ((processed-params (org-babel-process-params params)))
-    (with-temp-buffer
-      (insert (org-babel-expand-body:swiftui body
-                                             params
-                                             processed-params))
-      (shell-command-on-region
-       (point-min)
-       (point-max)
-       "swift -" nil 't)
-      (buffer-string))))
 
 (provide 'ob-swiftui)
 ;;; ob-swiftui.el ends here
