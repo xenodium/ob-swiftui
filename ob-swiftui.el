@@ -136,11 +136,13 @@ This function is called by `org-babel-execute-src-block'"
 
 (defun ob-swiftui--expand-body (body params &optional processed-params)
   "Expand BODY according to PARAMS and PROCESSED-PARAMS, return the expanded body."
-  (let ((results (map-elt params :result-params))
-        (view-name (map-elt params :view)))
-    (setq body (format
-                "
-// Snippet heavily based on Chris Eidhof's code at:
+  (let ((write-to-file (member "file" (map-elt params :result-params)))
+        (root-view (when (and (map-elt params :view)
+                              (not (string-equal (map-elt params :view) "none")))
+                     (map-elt params :view))))
+    (format
+     "
+// Swift snippet heavily based on Chris Eidhof's code at:
 // https://gist.github.com/chriseidhof/26768f0b63fa3cdf8b46821e099df5ff
 
 import Cocoa
@@ -230,21 +232,15 @@ func screenshot(view: NSView, saveTo fileURL: URL) {
 // Additional view definitions.
 %s
 "
-                (if (member "file" results)
-                    ;; Writes to file.
-                    "true"
-                  ;; Runs in separate window.
-                  "false")
-                (cond ((or (not view-name)
-                           (string-equal view-name "none"))
-                       (format "NSApplication.shared.run {%s}" body))
-                      (t
-                       (format "NSApplication.shared.run(%s())" view-name)))
-                (cond ((or (not view-name)
-                           (string-equal view-name "none"))
-                       "")
-                      (t
-                       body))))))
+     (if write-to-file
+         "true"
+       "false")
+     (if root-view
+         (format "NSApplication.shared.run(%s())" root-view)
+       (format "NSApplication.shared.run {%s}" body))
+     (if root-view
+         body
+       ""))))
 
 (provide 'ob-swiftui)
 ;;; ob-swiftui.el ends here
