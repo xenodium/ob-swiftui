@@ -102,14 +102,24 @@
 
 ;;; Code:
 (require 'ob)
-(require 'ob-ref)
-(require 'ob-comint)
-(require 'ob-eval)
+(require 'org)
 (require 'swift-mode)
 (require 'map)
 
 (defvar org-babel-default-header-args:swiftui '((:results . "window")
                                                 (:view . "none")))
+
+(defun org-babel-execute:swiftui (body params)
+  "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
+This function is called by `org-babel-execute-src-block'"
+  (message "executing SwiftUI source code block")
+  (with-temp-buffer
+    (insert (ob-swiftui--expand-body body params))
+    (shell-command-on-region
+     (point-min)
+     (point-max)
+     "swift -" nil 't)
+    (buffer-string)))
 
 (defun ob-swiftui-setup ()
   "Set up babel SwiftUI support."
@@ -119,22 +129,7 @@
                                        '((swiftui . t))))
   (add-to-list 'org-src-lang-modes '("swiftui" . swift)))
 
-(defun org-babel-execute:swiftui (body params)
-  "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
-This function is called by `org-babel-execute-src-block'"
-  (message "executing SwiftUI source code block")
-  (let ((processed-params (org-babel-process-params params)))
-    (with-temp-buffer
-      (insert (ob-swiftui--expand-body body
-                                             params
-                                             processed-params))
-      (shell-command-on-region
-       (point-min)
-       (point-max)
-       "swift -" nil 't)
-      (buffer-string))))
-
-(defun ob-swiftui--expand-body (body params &optional processed-params)
+(defun ob-swiftui--expand-body (body params)
   "Expand BODY according to PARAMS and PROCESSED-PARAMS, return the expanded body."
   (let ((write-to-file (member "file" (map-elt params :result-params)))
         (root-view (when (and (map-elt params :view)
