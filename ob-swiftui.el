@@ -107,7 +107,9 @@
 (require 'map)
 
 (defvar org-babel-default-header-args:swiftui '((:results . "window")
-                                                (:view . "none")))
+                                                (:view . "none"))
+  "Default ob-swiftui header args.
+Must be named `org-babel-default-header-args:swiftui' to itegrate with `ob'.")
 
 (defun org-babel-execute:swiftui (body params)
   "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
