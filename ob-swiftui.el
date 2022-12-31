@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez
 ;; Package-Requires: ((emacs "25.1") (swift-mode "8.2.0") (org "9.2.0"))
 ;; URL: https://github.com/xenodium/ob-swiftui
-;; Version: 0.01
+;; Version: 0.02
 
 ;;; License:
 
@@ -105,6 +105,9 @@
 (require 'org)
 (require 'swift-mode)
 (require 'map)
+
+;; Aliasing enables block syntax highlighting.
+(defalias 'swiftui-mode #'swift-mode)
 
 (defvar org-babel-default-header-args:swiftui '((:results . "window")
                                                 (:view . "none"))
