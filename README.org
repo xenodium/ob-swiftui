@@ -24,22 +24,21 @@ Runs SwiftUI in a separate window (default and can be omitted).
 Use a generated root view and render in external window (default):
 
 #+begin_src org
-,#+begin_src swiftui
-  Rectangle()
-    .fill(Color.yellow)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-,#+end_src
+  ,#+begin_src swiftui
+    Rectangle()
+      .fill(Color.yellow)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  ,#+end_src
 #+end_src
-
 
 is equivalent to:
 
 #+begin_src org
-,#+begin_src swiftui :results window :view none
-  Rectangle()
-    .fill(Color.yellow)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-,#+end_src
+  ,#+begin_src swiftui :results window :view none
+    Rectangle()
+      .fill(Color.yellow)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  ,#+end_src
 #+end_src
 
 ** :view FooView
@@ -47,32 +46,32 @@ If /view:/ is given, use FooView as the root view. Otherwise,
 generate a root view and embed source block in view body.
 
 #+begin_src org
-,#+begin_src swiftui :results window :view FooView
-  struct FooView: View {
-    var body: some View {
-      VStack(spacing: 10) {
-        BarView()
-        BazView()
+  ,#+begin_src swiftui :results window :view FooView
+    struct FooView: View {
+      var body: some View {
+        VStack(spacing: 10) {
+          BarView()
+          BazView()
+        }
       }
     }
-  }
 
-  struct BarView: View {
-    var body: some View {
-      Rectangle()
-        .fill(Color.yellow)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    struct BarView: View {
+      var body: some View {
+        Rectangle()
+          .fill(Color.yellow)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
     }
-  }
 
-  struct BazView: View {
-    var body: some View {
-      Rectangle()
-        .fill(Color.blue)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    struct BazView: View {
+      var body: some View {
+        Rectangle()
+          .fill(Color.blue)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
     }
-  }
-,#+end_src
+  ,#+end_src
 #+end_src
 
 ** :results file
@@ -80,11 +79,11 @@ Runs SwiftUI in the background and saves an image snapshot to
 a file.
 
 #+begin_src org
-,#+begin_src swiftui :results file
-  Rectangle()
-    .fill(Color.yellow)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-,#+end_src
+  ,#+begin_src swiftui :results file
+    Rectangle()
+      .fill(Color.yellow)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  ,#+end_src
 #+end_src
 
 * Auto refresh :results file image
