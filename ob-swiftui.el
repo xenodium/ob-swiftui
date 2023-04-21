@@ -141,6 +141,10 @@ This function is called by `org-babel-execute-src-block'"
                               (not (string-equal (map-elt params :view) "none")))
                        (map-elt params :view)
                      "ContentView")))
+    (when (and (not (string-match root-view body))
+               (or (string-match "struct" body)
+                   (string-match "class" body)))
+      (user-error "Either name one of the views ContentView or specify :view param."))
     (if write-to-file
         (ob-swiftui--expand-body-preview body root-view)
       (message (ob-swiftui--expand-body-window body root-view))
