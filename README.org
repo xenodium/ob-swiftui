@@ -74,6 +74,8 @@ generate a root view and embed source block in view body.
   ,#+end_src
 #+end_src
 
+Note: Defining a view named ContentView, implies =view: ContentView=
+
 ** :results file
 Runs SwiftUI in the background and saves an image snapshot to
 a file.
