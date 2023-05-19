@@ -2,7 +2,7 @@
 
 * ob-swiftui
 
-[[https://www.buymeacoffee.com/xenodium][Buy me a coffee ☕]]
+UPDATE: See [[https://xenodium.com/ob-swiftui-updates/][blog post]] for latest update.
 
 Evaluate SwiftUI snippets using Emacs [[https://orgmode.org/worg/org-contrib/babel/intro.html][org babel]].
 
