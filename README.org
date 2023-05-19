@@ -2,7 +2,7 @@
 
 * ob-swiftui
 
-UPDATE: See [[https://xenodium.com/ob-swiftui-updates/][blog post]] for latest update.
+UPDATE: See [[https://xenodium.com/ob-swiftui-updates/][blog post]] for latest changes.
 
 Evaluate SwiftUI snippets using Emacs [[https://orgmode.org/worg/org-contrib/babel/intro.html][org babel]].
 
