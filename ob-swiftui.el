@@ -158,9 +158,9 @@ import SwiftUI
 
 let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer in
   Task {
-    let data = await ImageRenderer(
-      content: %s()
-    ).cgImage?.pngData(compressionFactor: 1)
+    let renderer = await ImageRenderer(content: %s())
+    renderer.scale = NSScreen.main?.backingScaleFactor ?? 1.0
+    let data = await renderer.cgImage?.pngData(compressionFactor: 1)
     do {
       let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         .appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString + \".png\")
