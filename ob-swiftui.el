@@ -118,13 +118,14 @@ Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
   "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing SwiftUI source code block")
-  (with-temp-buffer
-    (insert (ob-swiftui--expand-body body params))
-    (shell-command-on-region
-     (point-min)
-     (point-max)
-     "swift -" nil 't)
-    (buffer-string)))
+  (let ((target (make-temp-file "ob-swiftui-exe-")))
+    (with-temp-buffer
+      (insert (ob-swiftui--expand-body body params))
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       (format "swiftc -o %s -" target) nil))
+    (shell-command-to-string target)))
 
 (defun ob-swiftui-setup ()
   "Set up babel SwiftUI support."
@@ -157,9 +158,9 @@ import SwiftUI
 
 let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer in
   Task {
-    let data = await ImageRenderer(
-      content: %s()
-    ).cgImage?.pngData(compressionFactor: 1)
+    let renderer = await ImageRenderer(content: %s())
+    renderer.scale = NSScreen.main?.backingScaleFactor ?? 1.0
+    let data = await renderer.cgImage?.pngData(compressionFactor: 1)
     do {
       let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         .appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString + \".png\")
