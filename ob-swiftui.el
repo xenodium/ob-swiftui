@@ -118,13 +118,14 @@ Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
   "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing SwiftUI source code block")
-  (with-temp-buffer
-    (insert (ob-swiftui--expand-body body params))
-    (shell-command-on-region
-     (point-min)
-     (point-max)
-     "swift -" nil 't)
-    (buffer-string)))
+  (let ((target (make-temp-file "ob-swiftui-exe-")))
+    (with-temp-buffer
+      (insert (ob-swiftui--expand-body body params))
+      (shell-command-on-region
+       (point-min)
+       (point-max)
+       (format "swiftc -o %s -" target) nil))
+    (shell-command-to-string target)))
 
 (defun ob-swiftui-setup ()
   "Set up babel SwiftUI support."
