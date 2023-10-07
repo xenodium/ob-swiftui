@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez
 ;; Package-Requires: ((emacs "25.1") (swift-mode "8.2.0") (org "9.2.0"))
 ;; URL: https://github.com/xenodium/ob-swiftui
-;; Version: 0.7
+;; Version: 0.8
 
 ;;; License:
 
