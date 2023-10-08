@@ -168,7 +168,7 @@ let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer 
       print(url.path, terminator: \"\")
       exit(0)
     } catch {
-      print(\"Error: \(error.localizedDescription)\")
+      print(\"Error: \\(error.localizedDescription)\")
       exit(1)
     }
   }
