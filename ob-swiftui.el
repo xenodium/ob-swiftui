@@ -109,8 +109,11 @@
 ;; Aliasing enables block syntax highlighting.
 (defalias 'swiftui-mode #'swift-mode)
 
-(defvar org-babel-default-header-args:swiftui '((:results . "window")
-                                                (:view . "none"))
+(defvar org-babel-default-header-args:swiftui
+  '((:results . "window")
+    (:view . "none")
+    (:file . (lambda ()
+               (make-temp-file "ob-swiftui-output-file-" nil ".png"))))
   "Default ob-swiftui header args.
 Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
 
@@ -118,14 +121,23 @@ Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
   "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing SwiftUI source code block")
-  (let ((target (make-temp-file "ob-swiftui-exe-")))
+  (let* ((write-to-file (member "file" (map-elt params :result-params)))
+         (output-file (and write-to-file
+                           (let ((file (cdr (assoc :file params))))
+                             (cond
+                              ((functionp file) (funcall file))
+                              ((stringp file) file)
+                              (t nil)))))
+         (target (make-temp-file "ob-swiftui-exe-")))
     (with-temp-buffer
       (insert (ob-swiftui--expand-body body params))
       (shell-command-on-region
        (point-min)
        (point-max)
-       (format "swiftc -o %s -" target) nil))
-    (shell-command-to-string target)))
+       (format "swiftc -o %s -" target)))
+    (shell-command-to-string (format "%s > %s" target
+                                     (or output-file "/dev/null")))
+    nil))
 
 (defun ob-swiftui-setup ()
   "Set up babel SwiftUI support."
@@ -162,10 +174,7 @@ let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer 
     renderer.scale = NSScreen.main?.backingScaleFactor ?? 1.0
     let data = await renderer.cgImage?.pngData(compressionFactor: 1)
     do {
-      let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        .appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString + \".png\")
-      try data?.write(to: url)
-      print(url.path, terminator: \"\")
+      try FileHandle.standardOutput.write(contentsOf: data!)
       exit(0)
     } catch {
       print(\"Error: \\(error.localizedDescription)\")
