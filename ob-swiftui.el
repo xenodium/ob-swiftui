@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez
 ;; Package-Requires: ((emacs "25.1") (swift-mode "8.2.0") (org "9.2.0"))
 ;; URL: https://github.com/xenodium/ob-swiftui
-;; Version: 0.8
+;; Version: 0.9
 
 ;;; License:
 
@@ -109,11 +109,9 @@
 ;; Aliasing enables block syntax highlighting.
 (defalias 'swiftui-mode #'swift-mode)
 
-(defvar org-babel-default-header-args:swiftui
-  '((:results . "window")
-    (:view . "none")
-    (:file . (lambda ()
-               (make-temp-file "ob-swiftui-output-file-" nil ".png"))))
+(defvar org-babel-default-header-args:swiftui '((:results . "window")
+                                                (:view . "none")
+                                                (:file . nil))
   "Default ob-swiftui header args.
 Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
 
@@ -121,15 +119,40 @@ Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
   "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing SwiftUI source code block")
-  (let ((target (make-temp-file "ob-swiftui-exe-")))
+  (let* ((write-to-file (member "file" (map-elt params :result-params)))
+         (binary (make-temp-file "ob-swiftui-"))
+         (source (concat binary ".swift"))
+         (png-path
+          (if (map-elt params :file)
+              (if (functionp (map-elt params :file))
+                  (funcall (map-elt params :file))
+                (map-elt params :file))
+            (concat binary ".png")))
+         (command (format "swiftc %s -o %s && %s" source binary binary))
+         (output))
+    (when (and (map-elt params :file)
+               (not write-to-file))
+      (user-error "When setting :file, must also use \":results file\""))
     (with-temp-buffer
-      (insert (ob-swiftui--expand-body body params))
-      (shell-command-on-region
-       (point-min)
-       (point-max)
-       (format "swiftc -o %s -" target)))
-    (shell-command target))
-    nil)
+      (insert (ob-swiftui--expand-body
+               body (cons `(:file . ,png-path) params)))
+      (let ((inhibit-message t))
+        (write-file source)))
+    (with-temp-buffer
+      (shell-command command (current-buffer))
+      (setq output (string-trim (buffer-string))))
+    ;; Checking for error: string as opposed to exit code
+    ;; as there's a currently a bug in the Swift code
+    ;; preventing exit with 0.
+    (if (string-match "error:" output)
+        (cond ((map-elt params :file)
+               (user-error output))
+              (t
+               output))
+      (cond ((map-elt params :file)
+             nil)
+            (t
+             output)))))
 
 (defun ob-swiftui-setup ()
   "Set up babel SwiftUI support."
@@ -145,17 +168,14 @@ This function is called by `org-babel-execute-src-block'"
         (root-view (if (and (map-elt params :view)
                             (not (string-equal (map-elt params :view) "none")))
                        (map-elt params :view)
-                     "ContentView")))
+                     "ContentView"))
+        (output-file (map-elt params :file)))
     (when (and (not (string-match root-view body))
                (or (string-match "struct" body)
                    (string-match "class" body)))
       (user-error "Either name one of the views ContentView or specify :view param."))
     (if write-to-file
-        (let ((output-file (cdr (assoc :file params))))
-          (when (functionp output-file)
-            (setq output-file (funcall output-file)))
-          (ob-swiftui--expand-body-preview body root-view output-file))
-      (message (ob-swiftui--expand-body-window body root-view))
+        (ob-swiftui--expand-body-preview body root-view output-file)
       (ob-swiftui--expand-body-window body root-view))))
 
 (defun ob-swiftui--expand-body-preview (body root-view output-file)
@@ -171,6 +191,7 @@ let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer 
     do {
       let url = URL(fileURLWithPath: \"%s\")
       try data?.write(to: url)
+      print(url.path)
       exit(0)
     } catch {
       print(\"Error: \\(error.localizedDescription)\")
