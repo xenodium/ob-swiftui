@@ -98,4 +98,15 @@ org-babel-after-execute-hook
                                               (org-redisplay-inline-images))))
 #+end_src
 
+* Display retina image
+
+For retina (high-resolution) displays, if you found the output image is too large, you can instruct Org to scale the image to 0.5 to display in its native size:
+
+#+begin_src emacs-lisp
+(advice-add 'org--create-inline-image :filter-return
+            (defun org--create-inline-image/filter-return (x)
+              (setcdr x (plist-put (cdr x) :scale 0.5))
+              x))
+#+end_src
+
 👉 [[https://github.com/sponsors/xenodium][Support my work via GitHub Sponsors]]
