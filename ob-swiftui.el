@@ -109,8 +109,11 @@
 ;; Aliasing enables block syntax highlighting.
 (defalias 'swiftui-mode #'swift-mode)
 
-(defvar org-babel-default-header-args:swiftui '((:results . "window")
-                                                (:view . "none"))
+(defvar org-babel-default-header-args:swiftui
+  '((:results . "window")
+    (:view . "none")
+    (:file . (lambda ()
+               (make-temp-file "ob-swiftui-output-file-" nil ".png"))))
   "Default ob-swiftui header args.
 Must be named `org-babel-default-header-args:swiftui' to integrate with `ob'.")
 
@@ -124,8 +127,9 @@ This function is called by `org-babel-execute-src-block'"
       (shell-command-on-region
        (point-min)
        (point-max)
-       (format "swiftc -o %s -" target) nil))
-    (shell-command-to-string target)))
+       (format "swiftc -o %s -" target)))
+    (shell-command target))
+    nil)
 
 (defun ob-swiftui-setup ()
   "Set up babel SwiftUI support."
@@ -139,7 +143,7 @@ This function is called by `org-babel-execute-src-block'"
   "Expand BODY according to PARAMS and PROCESSED-PARAMS, return the expanded body."
   (let ((write-to-file (member "file" (map-elt params :result-params)))
         (root-view (if (and (map-elt params :view)
-                              (not (string-equal (map-elt params :view) "none")))
+                            (not (string-equal (map-elt params :view) "none")))
                        (map-elt params :view)
                      "ContentView")))
     (when (and (not (string-match root-view body))
@@ -147,28 +151,29 @@ This function is called by `org-babel-execute-src-block'"
                    (string-match "class" body)))
       (user-error "Either name one of the views ContentView or specify :view param."))
     (if write-to-file
-        (ob-swiftui--expand-body-preview body root-view)
+        (let ((output-file (cdr (assoc :file params))))
+          (when (functionp output-file)
+            (setq output-file (funcall output-file)))
+          (ob-swiftui--expand-body-preview body root-view output-file))
       (message (ob-swiftui--expand-body-window body root-view))
       (ob-swiftui--expand-body-window body root-view))))
 
-(defun ob-swiftui--expand-body-preview (body root-view)
+(defun ob-swiftui--expand-body-preview (body root-view output-file)
   (format
      "
 import SwiftUI
 
 let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer in
-  Task {
-    let renderer = await ImageRenderer(content: %s())
+  Task.detached { @MainActor in
+    let renderer = ImageRenderer(content: %s())
     renderer.scale = NSScreen.main?.backingScaleFactor ?? 1.0
-    let data = await renderer.cgImage?.pngData(compressionFactor: 1)
+    let data = renderer.cgImage?.pngData(compressionFactor: 1)
     do {
-      let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        .appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString + \".png\")
+      let url = URL(fileURLWithPath: \"%s\")
       try data?.write(to: url)
-      print(url.path, terminator: \"\")
       exit(0)
     } catch {
-      print(\"Error: \(error.localizedDescription)\")
+      print(\"Error: \\(error.localizedDescription)\")
       exit(1)
     }
   }
@@ -187,6 +192,7 @@ extension CGImage {
 %s
 "
      root-view
+     output-file
      (if (string-match root-view body)
          body
        (format "

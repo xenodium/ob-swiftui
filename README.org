@@ -78,7 +78,7 @@ Note: Defining a view named ContentView, implies =view: ContentView=
 
 ** :results file
 Runs SwiftUI in the background and saves an image snapshot to
-a file.
+a file. You can save the image to the location specified by the =:file= header argument, otherwise, it will be saved to a temporary location if =:file= is omitted. Please note that currently, =png= is the only supported image format.
 
 #+begin_src org
   ,#+begin_src swiftui :results file
@@ -96,6 +96,17 @@ org-babel-after-execute-hook
   (add-hook 'org-babel-after-execute-hook (lambda ()
                                             (when org-inline-image-overlays
                                               (org-redisplay-inline-images))))
+#+end_src
+
+* Display retina image
+
+For retina (high-resolution) displays, if you found the output image is too large, you can instruct Org to scale the image to 0.5 to display in its native size:
+
+#+begin_src emacs-lisp
+(advice-add 'org--create-inline-image :filter-return
+            (defun org--create-inline-image/filter-return (x)
+              (setcdr x (plist-put (cdr x) :scale 0.5))
+              x))
 #+end_src
 
 👉 [[https://github.com/sponsors/xenodium][Support my work via GitHub Sponsors]]
