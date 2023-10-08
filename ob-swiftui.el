@@ -169,10 +169,10 @@ This function is called by `org-babel-execute-src-block'"
 import SwiftUI
 
 let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer in
-  Task {
-    let renderer = await ImageRenderer(content: %s())
+  Task.detached { @MainActor in
+    let renderer = ImageRenderer(content: %s())
     renderer.scale = NSScreen.main?.backingScaleFactor ?? 1.0
-    let data = await renderer.cgImage?.pngData(compressionFactor: 1)
+    let data = renderer.cgImage?.pngData(compressionFactor: 1)
     do {
       try FileHandle.standardOutput.write(contentsOf: data!)
       exit(0)
