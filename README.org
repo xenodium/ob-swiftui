@@ -78,7 +78,7 @@ Note: Defining a view named ContentView, implies =view: ContentView=
 
 ** :results file
 Runs SwiftUI in the background and saves an image snapshot to
-a file.
+a file. You can save the image to the location specified by the =:file= header argument, otherwise, it will be saved to a temporary location if =:file= is omitted. Please note that currently, =png= is the only supported image format.
 
 #+begin_src org
   ,#+begin_src swiftui :results file
