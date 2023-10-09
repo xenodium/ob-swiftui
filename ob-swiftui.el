@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez
 ;; Package-Requires: ((emacs "25.1") (swift-mode "8.2.0") (org "9.2.0"))
 ;; URL: https://github.com/xenodium/ob-swiftui
-;; Version: 0.9
+;; Version: 0.10
 
 ;;; License:
 
@@ -264,9 +264,12 @@ extension NSApplication {
   }
 }
 
+let settingsFilePath = NSHomeDirectory() + \"/.ob-swiftui.plist\"
+let frameUserDefaultsKey = \"ob.swiftui.frameUserDefaultsKey\"
+
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   var window = NSWindow(
-    contentRect: NSRect(x: 0, y: 0, width: 414 * 0.2, height: 896 * 0.2),
+    contentRect: NSRect(x: 0, y: 0, width: 200, height: 200),
     styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
     backing: .buffered, defer: false)
 
@@ -276,10 +279,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     window.delegate = self
     window.center()
     window.contentView = NSHostingView(rootView: contentView)
-    window.makeKeyAndOrderFront(nil)
     window.title = \"press \\\"q\\\" to exit\"
-    window.setFrameAutosaveName(\"Main Window\")
+
+    // Can't use window.setFrameAutosaveName since the binary name is
+    // generated for every execution, this in a different namespace.
+    if let data = try? Data(contentsOf: URL(fileURLWithPath: settingsFilePath)),
+       let rect = try? PropertyListDecoder().decode(NSRect.self, from: data) {
+      window.setFrame(rect, display: true)
+    }
+    window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
+   }
+
+  func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+    return NSSize(width: max(frameSize.width, 200), height: max(frameSize.height, 200))
+  }
+
+  func windowWillClose(_ notification: Notification) {
+    let encoder = PropertyListEncoder()
+    guard let data = try? encoder.encode(window.frame) else {
+          print(\"Warning: Could not encode frame details\")
+          return
+    }
+    try? data.write(to: URL(fileURLWithPath: settingsFilePath))
   }
 }
 
